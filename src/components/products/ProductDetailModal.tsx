@@ -310,10 +310,41 @@ const ProductDetailModal = ({
                   <FormField control={form.control} name="image" render={({
                 field
               }) => <FormItem>
-                        <FormLabel>Product Image (URL)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="https://example.com/image.jpg" {...field} />
-                        </FormControl>
+                        <FormLabel>Product Image</FormLabel>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-sm font-medium mb-1 block">Upload Image</label>
+                            <Input 
+                              type="file" 
+                              accept="image/*" 
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onload = (event) => {
+                                    const result = event.target?.result as string;
+                                    field.onChange(result);
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                              className="cursor-pointer"
+                            />
+                          </div>
+                          <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                              <span className="w-full border-t" />
+                            </div>
+                            <div className="relative flex justify-center text-xs uppercase">
+                              <span className="bg-background px-2 text-muted-foreground">
+                                Or enter URL
+                              </span>
+                            </div>
+                          </div>
+                          <FormControl>
+                            <Input placeholder="https://example.com/image.jpg" {...field} />
+                          </FormControl>
+                        </div>
                         <FormMessage />
                         {field.value && <div className="mt-2">
                             <img src={field.value} alt="Preview" className="w-24 h-24 object-cover rounded-md border" onError={e => {
