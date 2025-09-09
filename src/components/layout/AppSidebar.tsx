@@ -44,7 +44,7 @@ const mainMenuItems = [{
   title: "Alerts",
   url: "/alerts",
   icon: Bell,
-  roles: ['user', 'admin', 'superadmin'],
+  roles: ['admin', 'superadmin'],
   description: "System alerts and notifications"
 }];
 
