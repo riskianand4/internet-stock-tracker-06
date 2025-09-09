@@ -59,11 +59,7 @@ const ProductsManager = () => {
 
     // Apply search filter
     if (searchQuery) {
-      filtered = filtered.filter(product => 
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        product.sku.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        product.category.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      filtered = filtered.filter(product => product.name.toLowerCase().includes(searchQuery.toLowerCase()) || product.sku.toLowerCase().includes(searchQuery.toLowerCase()) || product.category.toLowerCase().includes(searchQuery.toLowerCase()));
     }
 
     // Apply category filter
@@ -93,7 +89,6 @@ const ProductsManager = () => {
           return 0;
       }
     });
-    
     return filtered;
   }, [products, searchQuery, categoryFilter, statusFilter, sortBy]);
   const handleBulkAction = (action: string) => {
@@ -263,7 +258,7 @@ const ProductsManager = () => {
           delay: index * 0.1
         }}>
               <Card className="glass hover-lift">
-                <CardContent className="mobile-padding-compact text-center">
+                <CardContent className="mobile-padding-compact text-center flex flex-col justify-center items-center ">
                   <p className="mobile-text-tiny text-muted-foreground mb-1">{stat.label}</p>
                   <p className={`mobile-text-small md:text-lg font-bold text-${stat.color}`}>
                     {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
@@ -291,9 +286,7 @@ const ProductsManager = () => {
                   </SelectTrigger>
                   <SelectContent className="bg-background border shadow-lg z-50">
                     <SelectItem value="all">Semua Kategori</SelectItem>
-                    {categories.slice(1).map((cat: string) => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                    ))}
+                    {categories.slice(1).map((cat: string) => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                   </SelectContent>
                 </Select>
 
