@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import MainLayout from '@/components/layout/MainLayout';
 import ModernLoginPage from '@/components/auth/ModernLoginPage';
@@ -24,6 +24,7 @@ import { ErrorBoundary } from '@/components/feedback/ErrorBoundary';
 import OptimizedAutomatedStockAlerts from '@/components/alerts/OptimizedAutomatedStockAlerts';
 import OptimizedAutoAlertMonitor from '@/components/alerts/OptimizedAutoAlertMonitor';
 import { createStockAlert, acknowledgeStockAlert } from '@/services/stockMovementApi';
+import { InventoryApiService } from '@/services/inventoryApi';
 
 export default function AlertsPage() {
   const { user, isAuthenticated } = useApp();
@@ -37,12 +38,15 @@ export default function AlertsPage() {
   // Alert form state
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [products, setProducts] = useState<any[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const inventoryApi = new InventoryApiService();
   const [formData, setFormData] = useState({
     type: '',
     severity: 'MEDIUM',
     title: '',
     message: '',
-    category: 'system'
+    productId: ''
   });
 
   // Convert stock alerts to the expected format and add system alerts
@@ -96,6 +100,46 @@ export default function AlertsPage() {
   const criticalAlerts = allAlerts.filter(alert => alert.severity === 'critical').length;
   const resolvedAlerts = allAlerts.filter(alert => alert.isResolved).length;
 
+  // Map alert type to category
+  const getAlertCategory = (type: string) => {
+    switch (type) {
+      case 'SYSTEM': return 'system_health';
+      case 'SECURITY': return 'security';
+      case 'PERFORMANCE': return 'performance';
+      case 'LOW_STOCK':
+      case 'OUT_OF_STOCK':
+      case 'OVERSTOCK':
+      case 'EXPIRING': return 'inventory';
+      default: return 'system_health';
+    }
+  };
+
+  // Load products when dialog opens and type is stock-related
+  useEffect(() => {
+    if (isCreateDialogOpen && ['LOW_STOCK', 'OUT_OF_STOCK', 'OVERSTOCK', 'EXPIRING'].includes(formData.type)) {
+      loadProducts();
+    }
+  }, [isCreateDialogOpen, formData.type]);
+
+  const loadProducts = async () => {
+    setLoadingProducts(true);
+    try {
+      const response = await inventoryApi.getProducts();
+      if (response.success && response.data) {
+        setProducts(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading products:', error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat daftar produk",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
   // Handle form submission
   const handleCreateAlert = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,15 +163,29 @@ export default function AlertsPage() {
       return;
     }
 
+    // Check if product is required for stock alerts
+    const isStockAlert = ['LOW_STOCK', 'OUT_OF_STOCK', 'OVERSTOCK', 'EXPIRING'].includes(formData.type);
+    if (isStockAlert && !formData.productId) {
+      toast({
+        title: "Error",
+        description: "Pilih produk untuk alert tipe stok",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      await createStockAlert({
+      const alertData = {
         type: formData.type.toUpperCase(),
         severity: formData.severity,
         title: formData.title,
         message: formData.message,
-        category: formData.category
-      });
+        category: getAlertCategory(formData.type),
+        ...(isStockAlert && { productId: formData.productId })
+      };
+
+      await createStockAlert(alertData);
 
       toast({
         title: "Berhasil",
@@ -141,7 +199,7 @@ export default function AlertsPage() {
         severity: 'MEDIUM',
         title: '',
         message: '',
-        category: 'system'
+        productId: ''
       });
       setIsCreateDialogOpen(false);
       
@@ -151,7 +209,7 @@ export default function AlertsPage() {
       console.error('Error creating alert:', error);
       toast({
         title: "Error",
-        description: "Gagal membuat alert. Pastikan backend server berjalan.",
+        description: "Gagal membuat alert. Periksa data dan coba lagi.",
         variant: "destructive"
       });
     } finally {
@@ -216,7 +274,7 @@ export default function AlertsPage() {
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
                       <Label htmlFor="alertType">Tipe Alert *</Label>
-                      <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
+                      <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value, productId: ''})}>
                         <SelectTrigger>
                           <SelectValue placeholder="Pilih tipe alert" />
                         </SelectTrigger>
@@ -226,9 +284,39 @@ export default function AlertsPage() {
                           <SelectItem value="PERFORMANCE">Performance Alert</SelectItem>
                           <SelectItem value="LOW_STOCK">Low Stock Alert</SelectItem>
                           <SelectItem value="OUT_OF_STOCK">Out of Stock Alert</SelectItem>
+                          <SelectItem value="OVERSTOCK">Overstock Alert</SelectItem>
+                          <SelectItem value="EXPIRING">Expiring Alert</SelectItem>
                         </SelectContent>
                       </Select>
+                      {['LOW_STOCK', 'OUT_OF_STOCK', 'OVERSTOCK', 'EXPIRING'].includes(formData.type) && (
+                        <p className="text-xs text-muted-foreground">
+                          Untuk tipe stok, pilih produk di bawah.
+                        </p>
+                      )}
                     </div>
+                    {/* Product Selection for Stock Alerts */}
+                    {['LOW_STOCK', 'OUT_OF_STOCK', 'OVERSTOCK', 'EXPIRING'].includes(formData.type) && (
+                      <div className="grid gap-2">
+                        <Label htmlFor="productId">Produk *</Label>
+                        <Select 
+                          value={formData.productId} 
+                          onValueChange={(value) => setFormData({...formData, productId: value})}
+                          disabled={loadingProducts}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={loadingProducts ? "Memuat produk..." : "Pilih produk"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {products.map(product => (
+                              <SelectItem key={product.id} value={product.id}>
+                                {product.name} ({product.sku})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    
                     <div className="grid gap-2">
                       <Label htmlFor="severity">Severity</Label>
                       <Select value={formData.severity} onValueChange={(value) => setFormData({...formData, severity: value})}>

@@ -15,6 +15,7 @@ import { QuickSearch } from './QuickSearch';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import NotificationCenter from './NotificationCenter';
 import SyncStatusIndicator from './SyncStatusIndicator';
+import useAlertNotifications from '@/hooks/useAlertNotifications';
 interface MainLayoutProps {
   children: React.ReactNode;
 }
@@ -29,6 +30,9 @@ export default function MainLayout({
   const location = useLocation();
   const [showSearch, setShowSearch] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  
+  // Initialize alert notifications polling for users
+  useAlertNotifications();
 
   // Keyboard shortcut for quick search
   useEffect(() => {
