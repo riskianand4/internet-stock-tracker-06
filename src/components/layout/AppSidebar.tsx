@@ -59,7 +59,7 @@ const adminMenuItems = [{
   title: "Users",
   url: "/users",
   icon: Users,
-  roles: ['admin', 'superadmin'],
+  roles: ['superadmin'],
   description: "Manage system users"
 }, {
   title: "Stock Reports",
